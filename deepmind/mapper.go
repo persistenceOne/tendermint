@@ -143,6 +143,12 @@ func mapResponseEndBlock(reb *abci.ResponseEndBlock) (*pbcosmos.ResponseEndBlock
 }
 
 func mapConsensusParams(cp *abci.ConsensusParams) *pbcosmos.ConsensusParams {
+	var versionParams *pbcosmos.VersionParams = nil;
+	if cp.Version != nil {
+		versionParams = &pbcosmos.VersionParams{
+			AppVersion: cp.Version.AppVersion,
+		}
+	}
 	return &pbcosmos.ConsensusParams{
 		Block: &pbcosmos.BlockParams{
 			MaxBytes: cp.Block.MaxBytes,
@@ -156,9 +162,7 @@ func mapConsensusParams(cp *abci.ConsensusParams) *pbcosmos.ConsensusParams {
 		Validator: &pbcosmos.ValidatorParams{
 			PubKeyTypes: cp.Validator.PubKeyTypes,
 		},
-		Version: &pbcosmos.VersionParams{
-			AppVersion: cp.Version.AppVersion,
-		},
+		Version: versionParams,
 	}
 }
 
