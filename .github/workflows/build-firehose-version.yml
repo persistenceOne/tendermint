@@ -1,3 +1,6 @@
+# This workflow is not on master branch, so we have to run this using github CLI
+# Run: echo '{"tag": "v0.34.22", "fh-tag": "v0.34.21-fh.2"}' | gh workflow run build-firehose-version.yml --ref=ajeet/fh-workflow --json
+
 name: Build firehose version
 run-name: ${{ inputs.dryrun && '[dryrun] ' || ''}}Creating p-${{ inputs.tag }}-fh <> tendermint/${{ inputs.tag }}..graphprotocol/${{inputs.fh-tag}}
 
