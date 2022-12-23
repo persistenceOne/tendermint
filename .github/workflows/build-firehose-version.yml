@@ -36,14 +36,14 @@ jobs:
           => Add remotes
           > git remote add tendermint https://github.com/tendermint/tendermint.git
           > git remote add gp https://github.com/graphprotocol/tendermint.git
-          
+
           => Fetch tags
           > git fetch tendermint refs/tags/${{ inputs.tag }}:refs/tags/tendermint_${{ inputs.tag }} --no-tags
           > git fetch gp refs/tags/${{ inputs.fh-tag }}:refs/tags/gp_${{ inputs.fh-tag }} --no-tags
-          
+
           => Check commit diff
           > git log tendermint_${{ inputs.tag }}..gp_${{ inputs.fh-tag }} --pretty='%h | %s [%an]'
-          
+
           => Apply commits
           > git checkout tendermint_${{ inputs.tag }}
           > git cherry-pick \$(git log tendermint_${{ inputs.tag }}..gp_${{ inputs.fh-tag }} --pretty="%H" --reverse | tr '\n' ' ')
@@ -84,7 +84,7 @@ jobs:
       - name: 'Test build'
         run: |
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} make build
-  
+
   create-tag:
     name: Create p-tag
     if: '!inputs.dryrun'
