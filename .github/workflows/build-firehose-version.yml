@@ -1,5 +1,6 @@
 name: Build tendermint firehose version
-run-name: ${{ inputs.dryrun && '[dryrun] ' || ''}}Building p-${{ inputs.tag }}-fh <> tendermint/${{ inputs.tag }}..graphprotocol/${{inputs.fh-tag}}
+run-name: ${{ inputs.dryrun && '[dryrun] ' || ''}}Building ${{ inputs.tag }}-pfh <> tendermint/${{ inputs.tag }}.
+  .graphprotocol/${{inputs.fh-tag}}
 
 on:
   workflow_dispatch:
