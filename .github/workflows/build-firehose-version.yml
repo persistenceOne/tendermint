@@ -1,0 +1,103 @@
+name: Build tendermint firehose version
+run-name: ${{ inputs.dryrun && '[dryrun] ' || ''}}Building ${{ inputs.tag }}-pfh <> tendermint/${{ inputs.tag }}.
+  .graphprotocol/${{inputs.fh-tag}}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        type: string
+        required: true
+        description: 'tendermint/tendermint tag name'
+      fh-tag:
+        type: string
+        required: true
+        description: 'graphprotocol/tendermint firehose tag name'
+      dryrun:
+        type: boolean
+        required: false
+        default: false
+        description: 'Setting this will only apply commits and run build'
+
+jobs:
+  apply-firehose-tendermint-commits:
+    name: Apply firehose/tendermint's commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/apply-firehose-commits
+        with:
+          tag: ${{ inputs.tag }}
+          fh-tag: ${{ inputs.fh-tag }}
+          print-diff: 'y'
+      - name: 'Manually do it?'
+        if: always() && '!contains(env.TAGS, env.P_TAG)'
+        run: |
+          STEPS=$(cat << EOF
+          => Add remotes
+          > git remote add tendermint https://github.com/tendermint/tendermint.git
+          > git remote add gp https://github.com/graphprotocol/tendermint.git
+
+          => Fetch tags
+          > git fetch tendermint refs/tags/${{ inputs.tag }}:refs/tags/tendermint_${{ inputs.tag }} --no-tags
+          > git fetch gp refs/tags/${{ inputs.fh-tag }}:refs/tags/gp_${{ inputs.fh-tag }} --no-tags
+
+          => Check commit diff
+          > git log tendermint_${{ inputs.tag }}..gp_${{ inputs.fh-tag }} --pretty='%h | %s [%an]'
+
+          => Apply commits
+          > git checkout tendermint_${{ inputs.tag }}
+          > git cherry-pick \$(git log tendermint_${{ inputs.tag }}..gp_${{ inputs.fh-tag }} --pretty="%H" --reverse | tr '\n' ' ')
+
+          => Test builds
+          > LEDGER_ENABLED=false make build
+
+          => Create the tag
+          > git tag ${{ env.P_TAG }}
+          > git push origin refs/tags/${{ env.P_TAG }}
+          EOF
+          )
+          STEPS="${STEPS//'%'/'%25'}"
+          STEPS="${STEPS//$'\n'/'%0A'}"
+          STEPS="${STEPS//$'\r'/'%0D'}"
+          echo "::notice title=Manually do it?::$STEPS"
+
+  build-firehose-version:
+    name: Test build
+    needs: apply-firehose-tendermint-commits
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goarch: ["arm", "amd64"]
+        goos: ["linux"]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/apply-firehose-commits
+        with:
+          tag: ${{ inputs.tag }}
+          fh-tag: ${{ inputs.fh-tag }}
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: 'Test build'
+        run: |
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} make build
+
+  create-tag:
+    name: Create p-tag
+    if: '!inputs.dryrun'
+    needs: build-firehose-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/apply-firehose-commits
+        with:
+          tag: ${{ inputs.tag }}
+          fh-tag: ${{ inputs.fh-tag }}
+      - name: 'remove .github/workflows dir and create the tag'
+        run: |
+          rm -rf .github/workflows
+          git add -A
+          git commit -m "remove .github/workflows dir (to be able to push the tag with default token)"
+          git tag ${{ env.P_TAG }}
+          git push origin refs/tags/${{ env.P_TAG }}
